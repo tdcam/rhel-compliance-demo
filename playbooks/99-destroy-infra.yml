@@ -1,14 +1,19 @@
-# playbooks/99-destroy-infra.yml
----
 - name: Destroy AWS infrastructure using Terraform
   hosts: localhost
   gather_facts: false
   vars:
     tf_dir: "{{ playbook_dir }}/../terraform"
   tasks:
-    - name: Destroy Terraform-managed infrastructure
+    - name: Terraform destroy with auto-approval
       community.general.terraform:
         project_path: "{{ tf_dir }}"
         state: absent
         force_init: true
+        force: true
         variables_file: "{{ tf_dir }}/terraform.tfvars"
+      register: destroy_output
+
+    - name: Show destroy output
+      debug:
+        var: destroy_output
+
