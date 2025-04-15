@@ -1,0 +1,17 @@
+# IdM settings
+ipa_domain: sandbox1108.opentlc.com
+ipa_realm: SANDBOX1108.OPENTLC.COM
+ipa_server: "{{ hostvars[groups['idm'][0]].inventory_hostname }}"
+ipa_admin_user: admin
+vault_idm_admin_password: CHANGEME  # Encrypt this with ansible-vault
+
+# AWS region for any lookups or dynamic tooling
+aws_region: us-east-2
+
+# Keycloak (optional, for later)
+keycloak_realm: CORP-REALM
+keycloak_base_url: "http://{{ hostvars[groups['keycloak'][0]].inventory_hostname }}:8080"
+
+# OpenSCAP output location
+openscap_report_dir: /tmp/openscap-reports
+

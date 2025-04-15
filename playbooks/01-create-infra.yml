@@ -1,0 +1,23 @@
+---
+- name: Create AWS infrastructure using Terraform
+  hosts: localhost
+  gather_facts: false
+  vars:
+    tf_dir: "{{ playbook_dir }}/../terraform"
+  tasks:
+    - name: Initialize Terraform
+      community.general.terraform:
+        project_path: "{{ tf_dir }}"
+        state: present
+        force_init: true
+
+    - name: Apply Terraform configuration
+      community.general.terraform:
+        project_path: "{{ tf_dir }}"
+        state: present
+        variables_file: "{{ tf_dir }}/terraform.tfvars"
+      register: terraform_output
+
+    - name: Display Terraform outputs
+      debug:
+        var: terraform_output.outputs

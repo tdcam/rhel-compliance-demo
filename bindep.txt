@@ -1,0 +1,4 @@
+gcc
+make
+python3-devel
+libxml2-devel

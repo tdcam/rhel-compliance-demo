@@ -1,0 +1,22 @@
+version: 3
+
+images:
+  base_image:
+    name: registry.redhat.io/ansible-automation-platform-25/ee-supported-rhel9:latest
+
+dependencies:
+  ansible_core:
+    package_pip: ansible-core
+  ansible_runner:
+    package_pip: ansible-runner
+  galaxy: requirements.yml
+  python: requirements.txt
+  system: bindep.txt
+
+additional_build_steps:
+  prepend_base:
+    - RUN microdnf -y install openscap-scanner scap-security-guide unzip yum-utils python3.11-ansible-runner
+    - RUN yum-config-manager --add-repo https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo
+    - RUN microdnf -y install terraform
+    - RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+    - RUN unzip awscliv2.zip && ./aws/install && rm -rf awscliv2.zip aws
