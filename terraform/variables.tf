@@ -23,7 +23,13 @@ variable "instance_type" {
   default = "t3.medium"
 }
 
-variable "ami_id" {
-  description = "AMI ID to launch RHEL STIG-hardened EC2 instances"
+variable "stig_ami_id" {
+  type        = string
+  description = "AMI ID for STIG-hardened instances"
+}
+
+variable "standard_ami_id" {
+  type        = string
+  description = "AMI ID for standard RHEL instances (IdM, Keycloak)"
 }
 
