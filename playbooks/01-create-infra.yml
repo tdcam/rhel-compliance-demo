@@ -2,6 +2,8 @@
 - name: Create AWS infrastructure using Terraform
   hosts: localhost
   gather_facts: false
+  vars_files:
+    - ../inventories/aws/group_vars/all.yml
   vars:
     tf_dir: "{{ playbook_dir }}/../terraform"
   tasks:
@@ -15,12 +17,13 @@
       community.general.terraform:
         project_path: "{{ tf_dir }}"
         state: present
+        variables_file: "{{ tf_dir }}/terraform.tfvars"
         variables:
           stig_ami_id: "{{ stig_ami_id }}"
           standard_ami_id: "{{ standard_ami_id }}"
-        variables_file: "{{ tf_dir }}/terraform.tfvars"
       register: terraform_output
 
     - name: Display Terraform outputs
       debug:
         var: terraform_output.outputs
+
