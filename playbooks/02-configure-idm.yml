@@ -2,7 +2,13 @@
 - name: Configure IdM server
   hosts: idm
   become: true
+  gather_facts: false
+
   tasks:
+    - name: Print all host variables (debugging)
+      debug:
+        var: hostvars[inventory_hostname]
+
     - name: Debug IdM variables
       debug:
         msg:
