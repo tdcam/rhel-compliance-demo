@@ -1,6 +1,10 @@
 ---
 - name: Configure IdM server and populate dummy users
   hosts: tag_idm
+  pre_tasks:
+    - name: Wait for SSH to become available
+      wait_for_connection:
+        timeout: 300
   become: true
   tasks:
     - name: Set ipa_server fact dynamically
