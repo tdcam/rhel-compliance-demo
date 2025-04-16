@@ -1,26 +1,33 @@
 ---
 - name: Configure IdM server and populate dummy users
-  hosts: all
+  hosts: idm
   become: true
-
   vars:
     ipa_domain: sandbox1108.opentlc.com
     ipa_realm: SANDBOX1108.OPENTLC.COM
     ipa_admin_user: admin
     ipa_admin_password: red22hat
     dummy_users:
-      - { username: lmorales, first: Leo, last: Morales }
-      - { username: qscott, first: Quinn, last: Scott }
-      - { username: adiaz, first: Andrew, last: Diaz }
-      - { username: nchavez, first: Nolan, last: Chavez }
-      - { username: gtorres, first: Gianna, last: Torres }
+      - { username: lmorales, first: Leo,      last: Morales }
+      - { username: qscott,   first: Quinn,    last: Scott }
+      - { username: adiaz,    first: Andrew,   last: Diaz }
+      - { username: nchavez,  first: Nolan,    last: Chavez }
+      - { username: gtorres,  first: Gianna,   last: Torres }
       - { username: sjackson, first: Serenity, last: Jackson }
-      - { username: lreyes, first: Lucas, last: Reyes }
-      - { username: mlopez, first: Muhammad, last: Lopez }
+      - { username: lreyes,   first: Lucas,    last: Reyes }
+      - { username: mlopez,   first: Muhammad, last: Lopez }
 
   tasks:
+    - name: Wait for SSH to become available
+      wait_for_connection:
+        timeout: 300
+
+    - name: Set ipa_server fact dynamically
+      set_fact:
+        ipa_server: "{{ ansible_host }}"
+
     - name: Install IdM server packages
-      dnf:
+      package:
         name: ipa-server
         state: present
 
@@ -32,28 +39,42 @@
         --ds-password {{ ipa_admin_password }}
         --admin-password {{ ipa_admin_password }}
         --setup-dns --no-forwarders
+        --no-host-dns
+        --hostname {{ ansible_host }}
       args:
         creates: /etc/ipa/default.conf
 
     - name: Ensure Kerberos credentials for IPA admin
-      shell: echo "{{ ipa_admin_password }}" | kinit {{ ipa_admin_user }}@{{ ipa_realm }}
-      register: kinit_result
-      changed_when: false
-      failed_when: kinit_result.rc != 0
+      command: "echo '{{ ipa_admin_password }}' | kinit {{ ipa_admin_user }}@{{ ipa_realm }}"
+      environment:
+        KRB5_CONFIG: /etc/krb5.conf
 
     - name: Create dummy IdM users
+      loop: "{{ dummy_users }}"
+      loop_control:
+        label: "{{ item.username }}"
       command: >
         ipa user-add {{ item.username }}
-        --first {{ item.first }}
-        --last {{ item.last }}
-        --homedir /home/{{ item.username }}
-        --shell /bin/bash
-      loop: "{{ dummy_users }}"
+        --first={{ item.first }}
+        --last={{ item.last }}
+        --homedir=/home/{{ item.username }}
+        --shell=/bin/bash
+      register: ipa_user_create
+      failed_when: ipa_user_create.rc != 0 and 'already exists' not in ipa_user_create.stderr
 
-    - name: Set passwords and expiration for dummy users
-      shell: |
-        echo "{{ ipa_admin_password }}" | kinit {{ ipa_admin_user }}@{{ ipa_realm }}
-        echo "{{ ipa_admin_password }}" | ipa passwd {{ item.username }}
-        ipa user-mod {{ item.username }} --setattr=krbPasswordExpiration=20301231011529
+    - name: Set password for dummy users
       loop: "{{ dummy_users }}"
+      loop_control:
+        label: "{{ item.username }}"
+      command: >
+        bash -c "echo 'red22hat' | ipa passwd {{ item.username }}"
+      register: ipa_passwd
+      failed_when: ipa_passwd.rc != 0 and 'Password change failed' in ipa_passwd.stderr
+
+    - name: Set password expiration far in the future
+      loop: "{{ dummy_users }}"
+      loop_control:
+        label: "{{ item.username }}"
+      command: >
+        ipa user-mod {{ item.username }} --setattr=krbPasswordExpiration=20301231011529
 
