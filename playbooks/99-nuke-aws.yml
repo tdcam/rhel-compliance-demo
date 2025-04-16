@@ -1,0 +1,81 @@
+---
+- name: Nuke all AWS infrastructure (except S3)
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    region: us-east-2
+
+  collections:
+    - amazon.aws
+    - community.aws
+
+  tasks:
+    - name: Gather all VPCs
+      amazon.aws.ec2_vpc_net_info:
+        region: "{{ region }}"
+      register: all_vpcs
+
+    - name: Show all VPCs
+      debug:
+        var: all_vpcs.vpcs
+
+    - name: Terminate all EC2 instances
+      amazon.aws.ec2_instance_info:
+        region: "{{ region }}"
+      register: ec2_info
+
+    - name: Kill all EC2s
+      amazon.aws.ec2:
+        instance_ids: "{{ ec2_info.instances | map(attribute='instance_id') | list }}"
+        state: absent
+        region: "{{ region }}"
+      when: ec2_info.instances | length > 0
+
+    - name: Loop through VPCs and delete dependencies
+      block:
+        - name: Delete subnets
+          amazon.aws.ec2_vpc_subnet:
+            state: absent
+            vpc_id: "{{ item.vpc_id }}"
+            region: "{{ region }}"
+          loop: "{{ all_vpcs.vpcs | flatten(levels=1) }}"
+          loop_control:
+            label: "{{ item.vpc_id }}"
+
+        - name: Delete IGWs
+          amazon.aws.ec2_vpc_igw:
+            state: absent
+            vpc_id: "{{ item.vpc_id }}"
+            region: "{{ region }}"
+          loop: "{{ all_vpcs.vpcs | flatten(levels=1) }}"
+          loop_control:
+            label: "{{ item.vpc_id }}"
+
+        - name: Delete route tables
+          amazon.aws.ec2_vpc_route_table:
+            vpc_id: "{{ item.vpc_id }}"
+            lookup: tag
+            state: absent
+            region: "{{ region }}"
+          loop: "{{ all_vpcs.vpcs | flatten(levels=1) }}"
+          loop_control:
+            label: "{{ item.vpc_id }}"
+
+        - name: Delete security groups (excluding default)
+          amazon.aws.ec2_group:
+            name: "{{ item.group_name }}"
+            state: absent
+            region: "{{ region }}"
+          loop: "{{ query('amazon.aws.ec2_group_info', region=region).security_groups | selectattr('group_name', '!=', 'default') | list }}"
+          ignore_errors: true
+
+        - name: Delete VPCs (excluding default)
+          amazon.aws.ec2_vpc_net:
+            vpc_id: "{{ item.vpc_id }}"
+            state: absent
+            region: "{{ region }}"
+          loop: "{{ all_vpcs.vpcs }}"
+          when: "'default' not in item.tags.Name | default('') | lower"
+  tags: nuke
+
