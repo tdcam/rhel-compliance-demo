@@ -23,7 +23,7 @@
       set_fact:
         ipa_server: "{{ ansible_host }}"
 
-    - name: Install IdM packages
+    - name: Install IdM server packages
       dnf:
         name:
           - ipa-server
@@ -42,6 +42,12 @@
       args:
         creates: /etc/ipa/default.conf
 
+    - name: Ensure Kerberos credentials for IPA admin
+      shell: |
+        echo "{{ ipa_admin_password }}" | kinit {{ ipa_admin_user }}
+      environment:
+        KRB5CCNAME: /tmp/krb5cc_ansible
+
     - name: Add dummy IdM users
       loop: "{{ ipa_dummy_users }}"
       loop_control:
@@ -52,17 +58,19 @@
         --last {{ item.last }}
         --homedir /home/{{ item.uid }}
         --shell /bin/bash
+      environment:
+        KRB5CCNAME: /tmp/krb5cc_ansible
       register: user_add_results
-      failed_when: false  # allow idempotency
+      failed_when: false
 
     - name: Set password for dummy users
       loop: "{{ ipa_dummy_users }}"
       loop_control:
         label: "{{ item.uid }}"
-      command: >
-        ipa passwd {{ item.uid }}
-      args:
-        stdin: "{{ default_password }}\n{{ default_password }}"
+      shell: |
+        echo -e "{{ default_password }}\n{{ default_password }}" | ipa passwd {{ item.uid }}
+      environment:
+        KRB5CCNAME: /tmp/krb5cc_ansible
 
     - name: Set Kerberos password expiration far in the future
       loop: "{{ ipa_dummy_users }}"
@@ -70,4 +78,6 @@
         label: "{{ item.uid }}"
       command: >
         ipa user-mod {{ item.uid }} --setattr=krbPasswordExpiration={{ future_expiration }}
+      environment:
+        KRB5CCNAME: /tmp/krb5cc_ansible
 
