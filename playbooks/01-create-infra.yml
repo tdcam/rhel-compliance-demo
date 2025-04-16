@@ -21,3 +21,4 @@
     - name: Display Terraform outputs
       debug:
         var: terraform_output.outputs
+

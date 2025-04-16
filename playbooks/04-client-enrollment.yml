@@ -1,13 +1,13 @@
 ---
 - name: Enroll RHEL clients into IdM
-  hosts: clients
+  hosts: stig
   become: true
   vars:
-    ipa_domain: "sandbox1108.opentlc.com"   # change to your IdM domain
-    ipa_realm: "SANDBOX1108.OPENTLC.COM"    # must be uppercase
-    ipa_server: "{{ hostvars[groups['idm'][0]].inventory_hostname }}"
-    ipa_admin_user: "admin"
-    ipa_admin_password: "{{ vault_idm_admin_password }}"  # store securely
+    ipa_domain: "{{ ipa_domain }}"
+    ipa_realm: "{{ ipa_realm }}"
+    ipa_server: "{{ ipa_server }}"
+    ipa_admin_user: "{{ ipa_admin_user }}"
+    ipa_admin_password: "{{ vault_idm_admin_password }}"
 
   roles:
     - redhat.rhel_system_roles.ipaclient

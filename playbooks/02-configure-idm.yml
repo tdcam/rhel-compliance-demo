@@ -17,3 +17,4 @@
         --setup-dns --no-forwarders
       args:
         creates: /etc/ipa/default.conf
+
