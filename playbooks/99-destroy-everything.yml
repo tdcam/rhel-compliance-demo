@@ -11,9 +11,3 @@
         state: absent
         force_init: true
         variables_file: "{{ tf_dir }}/terraform.tfvars"
-      register: terraform_destroy
-
-    - name: Show Terraform destroy output
-      debug:
-        var: terraform_destroy.stdout_lines
-

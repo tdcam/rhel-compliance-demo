@@ -1,3 +1,4 @@
+---
 - name: Configure IdM server
   hosts: idm
   become: true
@@ -16,4 +17,3 @@
         --setup-dns --no-forwarders
       args:
         creates: /etc/ipa/default.conf
-
