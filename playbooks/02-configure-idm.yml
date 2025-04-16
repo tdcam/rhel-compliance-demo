@@ -2,33 +2,14 @@
 - name: Configure IdM server and populate dummy users
   hosts: tag_idm
   become: true
-  vars:
-    ipa_realm: SANDBOX1108.OPENTLC.COM
-    ipa_domain: sandbox1108.opentlc.com
-    ipa_admin_user: admin
-    ipa_admin_password: red22hat
-    ipa_dummy_users:
-      - { uid: lmorales, first: Leo,      last: Morales }
-      - { uid: qscott,   first: Quinn,    last: Scott }
-      - { uid: adiaz,    first: Andrew,   last: Diaz }
-      - { uid: nchavez,  first: Nolan,    last: Chavez }
-      - { uid: gtorres,  first: Gianna,   last: Torres }
-      - { uid: sjackson, first: Serenity, last: Jackson }
-      - { uid: lreyes,   first: Lucas,    last: Reyes }
-      - { uid: mlopez,   first: Muhammad, last: Lopez }
-    default_password: red22hat
-    future_expiration: 20301231011529
   tasks:
     - name: Set ipa_server fact dynamically
       set_fact:
         ipa_server: "{{ ansible_host }}"
 
     - name: Install IdM server packages
-      dnf:
-        name:
-          - ipa-server
-          - ipa-server-dns
-          - bind
+      package:
+        name: ipa-server-dns
         state: present
 
     - name: Install IdM server with integrated DNS
@@ -36,48 +17,68 @@
         ipa-server-install --unattended
         --realm {{ ipa_realm }}
         --domain {{ ipa_domain }}
-        --ds-password {{ ipa_admin_password }}
-        --admin-password {{ ipa_admin_password }}
+        --ds-password {{ vault_idm_admin_password }}
+        --admin-password {{ vault_idm_admin_password }}
         --setup-dns --no-forwarders
+      args:
+        creates: /etc/ipa/default.conf
+
+    - name: Enroll IdM server as its own client
+      command: >
+        ipa-client-install --unattended
+        --server {{ ipa_server }}
+        --domain {{ ipa_domain }}
+        --realm {{ ipa_realm }}
+        --principal {{ ipa_admin_user }}
+        --password {{ vault_idm_admin_password }}
+        --force-ntpd
       args:
         creates: /etc/ipa/default.conf
 
     - name: Ensure Kerberos credentials for IPA admin
       shell: |
-        echo "{{ ipa_admin_password }}" | kinit {{ ipa_admin_user }}
+        echo "{{ vault_idm_admin_password }}" | kinit {{ ipa_admin_user }}@{{ ipa_realm }}
       environment:
         KRB5CCNAME: /tmp/krb5cc_ansible
 
-    - name: Add dummy IdM users
-      loop: "{{ ipa_dummy_users }}"
-      loop_control:
-        label: "{{ item.uid }}"
+    - name: Add dummy users
+      loop:
+        - { username: "lmorales", first: "Leo", last: "Morales" }
+        - { username: "qscott", first: "Quinn", last: "Scott" }
+        - { username: "adiaz", first: "Andrew", last: "Diaz" }
+        - { username: "nchavez", first: "Nolan", last: "Chavez" }
+        - { username: "gtorres", first: "Gianna", last: "Torres" }
+        - { username: "sjackson", first: "Serenity", last: "Jackson" }
+        - { username: "lreyes", first: "Lucas", last: "Reyes" }
+        - { username: "mlopez", first: "Muhammad", last: "Lopez" }
       command: >
-        ipa user-add {{ item.uid }}
-        --first {{ item.first }}
-        --last {{ item.last }}
-        --homedir /home/{{ item.uid }}
-        --shell /bin/bash
-      environment:
-        KRB5CCNAME: /tmp/krb5cc_ansible
-      register: user_add_results
+        ipa user-add {{ item.username }} --first {{ item.first }} --last {{ item.last }} \
+        --homedir=/home/{{ item.username }} --shell=/bin/bash
+      register: add_user_result
       failed_when: false
+      changed_when: add_user_result.rc == 0
 
-    - name: Set password for dummy users
-      loop: "{{ ipa_dummy_users }}"
-      loop_control:
-        label: "{{ item.uid }}"
+    - name: Set passwords for dummy users
+      loop:
+        - "lmorales"
+        - "qscott"
+        - "adiaz"
+        - "nchavez"
+        - "gtorres"
+        - "sjackson"
+        - "lreyes"
+        - "mlopez"
       shell: |
-        echo -e "{{ default_password }}\n{{ default_password }}" | ipa passwd {{ item.uid }}
-      environment:
-        KRB5CCNAME: /tmp/krb5cc_ansible
+        echo -e "{{ vault_idm_admin_password }}\n{{ vault_idm_admin_password }}" | ipa passwd {{ item }}
 
-    - name: Set Kerberos password expiration far in the future
-      loop: "{{ ipa_dummy_users }}"
-      loop_control:
-        label: "{{ item.uid }}"
-      command: >
-        ipa user-mod {{ item.uid }} --setattr=krbPasswordExpiration={{ future_expiration }}
-      environment:
-        KRB5CCNAME: /tmp/krb5cc_ansible
-
+    - name: Set account expiration far in the future
+      loop:
+        - "lmorales"
+        - "qscott"
+        - "adiaz"
+        - "nchavez"
+        - "gtorres"
+        - "sjackson"
+        - "lreyes"
+        - "mlopez"
+      command: ipa user-mod {{ item }} --setattr=krbPasswordExpiration=20301231011529
