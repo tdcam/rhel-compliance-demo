@@ -3,40 +3,71 @@
   hosts: tag_idm
   become: true
   vars:
-    ipa_domain: sandbox1108.opentlc.com
     ipa_realm: SANDBOX1108.OPENTLC.COM
+    ipa_domain: sandbox1108.opentlc.com
     ipa_admin_user: admin
-    vault_idm_admin_password: red22hat
+    ipa_admin_password: red22hat
+    ipa_dummy_users:
+      - { uid: lmorales, first: Leo,      last: Morales }
+      - { uid: qscott,   first: Quinn,    last: Scott }
+      - { uid: adiaz,    first: Andrew,   last: Diaz }
+      - { uid: nchavez,  first: Nolan,    last: Chavez }
+      - { uid: gtorres,  first: Gianna,   last: Torres }
+      - { uid: sjackson, first: Serenity, last: Jackson }
+      - { uid: lreyes,   first: Lucas,    last: Reyes }
+      - { uid: mlopez,   first: Muhammad, last: Lopez }
+    default_password: red22hat
+    future_expiration: 20301231011529
   tasks:
-    - name: Set ipa_server fact
+    - name: Set ipa_server fact dynamically
       set_fact:
-        ipa_server: "{{ ansible_host | default(public_ip_address) }}"
+        ipa_server: "{{ ansible_host }}"
+
+    - name: Install IdM packages
+      dnf:
+        name:
+          - ipa-server
+          - ipa-server-dns
+          - bind
+        state: present
 
     - name: Install IdM server with integrated DNS
       command: >
         ipa-server-install --unattended
         --realm {{ ipa_realm }}
         --domain {{ ipa_domain }}
-        --ds-password {{ vault_idm_admin_password }}
-        --admin-password {{ vault_idm_admin_password }}
+        --ds-password {{ ipa_admin_password }}
+        --admin-password {{ ipa_admin_password }}
         --setup-dns --no-forwarders
       args:
         creates: /etc/ipa/default.conf
 
-    - name: Create dummy users
-      loop:
-        - { name: 'lmorales', first: 'Leo',      last: 'Morales'  }
-        - { name: 'qscott',   first: 'Quinn',    last: 'Scott'    }
-        - { name: 'adiaz',    first: 'Andrew',   last: 'Diaz'     }
-        - { name: 'nchavez',  first: 'Nolan',    last: 'Chavez'   }
-        - { name: 'gtorres',  first: 'Gianna',   last: 'Torres'   }
-        - { name: 'sjackson', first: 'Serenity', last: 'Jackson'  }
-        - { name: 'lreyes',   first: 'Lucas',    last: 'Reyes'    }
-        - { name: 'mlopez',   first: 'Muhammad', last: 'Lopez'    }
+    - name: Add dummy IdM users
+      loop: "{{ ipa_dummy_users }}"
+      loop_control:
+        label: "{{ item.uid }}"
       command: >
-        ipa user-add {{ item.name }}
+        ipa user-add {{ item.uid }}
         --first {{ item.first }}
         --last {{ item.last }}
-        --homedir /home/{{ item.name }}
+        --homedir /home/{{ item.uid }}
         --shell /bin/bash
+      register: user_add_results
+      failed_when: false  # allow idempotency
+
+    - name: Set password for dummy users
+      loop: "{{ ipa_dummy_users }}"
+      loop_control:
+        label: "{{ item.uid }}"
+      command: >
+        ipa passwd {{ item.uid }}
+      args:
+        stdin: "{{ default_password }}\n{{ default_password }}"
+
+    - name: Set Kerberos password expiration far in the future
+      loop: "{{ ipa_dummy_users }}"
+      loop_control:
+        label: "{{ item.uid }}"
+      command: >
+        ipa user-mod {{ item.uid }} --setattr=krbPasswordExpiration={{ future_expiration }}
 
