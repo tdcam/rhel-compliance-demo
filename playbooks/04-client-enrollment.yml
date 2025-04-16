@@ -3,12 +3,7 @@
   hosts: stig
   become: true
   vars:
-    ipa_domain: "{{ ipa_domain }}"
-    ipa_realm: "{{ ipa_realm }}"
-    ipa_server: "{{ ipa_server }}"
-    ipa_admin_user: "{{ ipa_admin_user }}"
     ipa_admin_password: "{{ vault_idm_admin_password }}"
-
   roles:
     - redhat.rhel_system_roles.ipaclient
 

@@ -3,19 +3,10 @@
   hosts: idm
   become: true
   vars:
-    ipa_domain: "{{ ipa_domain }}"
-    ipa_realm: "{{ ipa_realm }}"
     ipa_admin_password: "{{ vault_idm_admin_password }}"
   tasks:
-    - name: Ensure required packages are installed
-      ansible.builtin.yum:
-        name:
-          - ipa-server
-          - ipa-server-dns
-        state: present
-
-    - name: Run IdM server install if not already configured
-      ansible.builtin.command: >
+    - name: Install IdM server with integrated DNS
+      command: >
         ipa-server-install --unattended
         --realm {{ ipa_realm }}
         --domain {{ ipa_domain }}
@@ -24,10 +15,4 @@
         --setup-dns --no-forwarders
       args:
         creates: /etc/ipa/default.conf
-
-    - name: Ensure IPA service is started and enabled
-      ansible.builtin.service:
-        name: ipa
-        state: started
-        enabled: true
 

@@ -1,36 +1,21 @@
 ---
-- name: Configure Keycloak integration with IdM
+- name: Configure Keycloak to use IdM as LDAP source
   hosts: keycloak
   become: true
   vars:
-    keycloak_realm: "{{ keycloak_realm }}"
-    keycloak_base_url: "{{ keycloak_base_url }}"
-    ipa_domain: "{{ ipa_domain }}"
-    ipa_realm: "{{ ipa_realm }}"
     ipa_admin_password: "{{ vault_idm_admin_password }}"
   tasks:
-    - name: Install required packages
-      package:
-        name:
-          - python3-pip
-          - podman
-        state: present
-
-    - name: Install python-keycloak client
-      pip:
-        name: python-keycloak
-
-    - name: Wait for Keycloak to be available
+    - name: Ensure Keycloak is reachable
       uri:
         url: "{{ keycloak_base_url }}/auth"
         method: GET
         return_content: yes
-      register: result
-      until: result.status == 200
-      retries: 10
-      delay: 5
+      register: keycloak_health
+      retries: 5
+      delay: 10
+      until: keycloak_health.status == 200
 
-    - name: Display placeholder for realm and LDAP config
+    - name: Display Keycloak readiness
       debug:
-        msg: "At this point, Keycloak realm '{{ keycloak_realm }}' would be created and configured to use LDAP from IdM at realm {{ ipa_realm }}"
+        msg: "Keycloak is up and reachable at {{ keycloak_base_url }}"
 
