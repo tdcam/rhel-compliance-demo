@@ -2,16 +2,14 @@
 - name: Configure IdM server
   hosts: idm
   become: true
-  vars:
-    ipa_admin_password: "{{ vault_idm_admin_password }}"
   tasks:
     - name: Install IdM server with integrated DNS
       command: >
         ipa-server-install --unattended
         --realm {{ ipa_realm }}
         --domain {{ ipa_domain }}
-        --ds-password {{ ipa_admin_password }}
-        --admin-password {{ ipa_admin_password }}
+        --ds-password {{ vault_idm_admin_password }}
+        --admin-password {{ vault_idm_admin_password }}
         --setup-dns --no-forwarders
       args:
         creates: /etc/ipa/default.conf
