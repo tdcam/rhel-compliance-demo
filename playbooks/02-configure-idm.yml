@@ -34,14 +34,16 @@
         state: present
         update_cache: true
 
-    - name: Install IdM server with integrated DNS
+    - name: Install IdM server with integrated DNS and external forwarders
       command: >
         ipa-server-install --unattended
         --realm {{ ipa_realm }}
         --domain {{ ipa_domain }}
         --ds-password {{ ipa_admin_password }}
         --admin-password {{ ipa_admin_password }}
-        --setup-dns --no-forwarders
+        --setup-dns
+        --forwarder=8.8.8.8
+        --forwarder=4.2.2.1
       args:
         creates: /etc/ipa/default.conf
 
