@@ -3,6 +3,13 @@
   hosts: idm
   become: true
   tasks:
+    - name: Debug IdM variables
+      debug:
+        msg:
+          - "IPA Realm: {{ ipa_realm }}"
+          - "IPA Domain: {{ ipa_domain }}"
+          - "IPA Admin Password: {{ vault_idm_admin_password }}"
+
     - name: Install IdM server with integrated DNS
       command: >
         ipa-server-install --unattended
