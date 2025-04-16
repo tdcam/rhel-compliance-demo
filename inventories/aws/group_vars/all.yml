@@ -1,7 +1,7 @@
 # IdM Configuration
 ipa_domain: sandbox1108.opentlc.com
 ipa_realm: SANDBOX1108.OPENTLC.COM
-ipa_server: "{{ hostvars[groups['idm'][0]].ansible_host | default(hostvars[groups['idm'][0]].public_ip_address) }}"
+ipa_server: "{{ hostvars['idm'].0.ansible_host | default(hostvars['idm'].0.public_ip_address) }}"
 ipa_admin_user: admin
 vault_idm_admin_password: red22hat
 
@@ -15,7 +15,7 @@ instance_count: 2
 
 # Keycloak Configuration
 keycloak_realm: CORP-REALM
-keycloak_base_url: "http://{{ hostvars[groups['keycloak'][0]].ansible_host | default(hostvars[groups['keycloak'][0]].public_ip_address) }}:8080"
+keycloak_base_url: "http://{{ hostvars['keycloak'].0.ansible_host | default(hostvars['keycloak'].0.public_ip_address) }}:8080"
 
 # OpenSCAP
 openscap_report_dir: /tmp/openscap-reports

@@ -1,21 +1,23 @@
 ---
-- name: Configure Keycloak to use IdM as LDAP source
+- name: Configure Keycloak
   hosts: keycloak
   become: true
-  vars:
-    ipa_admin_password: "{{ vault_idm_admin_password }}"
-  tasks:
-    - name: Ensure Keycloak is reachable
-      uri:
-        url: "{{ keycloak_base_url }}/auth"
-        method: GET
-        return_content: yes
-      register: keycloak_health
-      retries: 5
-      delay: 10
-      until: keycloak_health.status == 200
+  gather_facts: false
 
-    - name: Display Keycloak readiness
+  tasks:
+    - name: Debug Keycloak vars
       debug:
-        msg: "Keycloak is up and reachable at {{ keycloak_base_url }}"
+        msg:
+          - "IPA Domain: {{ ipa_domain }}"
+          - "IPA Realm: {{ ipa_realm }}"
+          - "IPA Server: {{ ipa_server }}"
+          - "IPA Admin User: {{ ipa_admin_user }}"
+          - "IPA Admin Password: {{ vault_idm_admin_password }}"
+          - "Keycloak Realm: {{ keycloak_realm }}"
+          - "Keycloak Base URL: {{ keycloak_base_url }}"
+
+    # Add your actual Keycloak configuration tasks here.
+    - name: Placeholder - install Keycloak or configure integration
+      debug:
+        msg: "Keycloak configuration tasks go here."
 

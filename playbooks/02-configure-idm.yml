@@ -5,15 +5,12 @@
   gather_facts: false
 
   tasks:
-    - name: Print all host variables (debugging)
-      debug:
-        var: hostvars[inventory_hostname]
-
     - name: Debug IdM variables
       debug:
         msg:
           - "IPA Realm: {{ ipa_realm }}"
           - "IPA Domain: {{ ipa_domain }}"
+          - "IPA Server: {{ ipa_server }}"
           - "IPA Admin Password: {{ vault_idm_admin_password }}"
 
     - name: Install IdM server with integrated DNS
