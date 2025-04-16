@@ -1,21 +1,20 @@
 ---
 - name: Configure IdM server and populate dummy users
-  hosts: tag_idm
-  pre_tasks:
+  hosts: all
+  become: true
+  vars:
+    ipa_domain: sandbox1108.opentlc.com
+    ipa_realm: SANDBOX1108.OPENTLC.COM
+    ipa_admin_user: admin
+    ipa_admin_password: red22hat
+  tasks:
     - name: Wait for SSH to become available
       wait_for_connection:
-        timeout: 300
-  become: true
-  tasks:
-    - name: Set ipa_server fact dynamically
-      set_fact:
-        ipa_server: "{{ hostvars[inventory_hostname].ansible_host }}"
+        timeout: 120
 
     - name: Install IdM server packages
       dnf:
-        name:
-          - ipa-server
-          - ipa-server-dns
+        name: ipa-server
         state: present
 
     - name: Install IdM server with integrated DNS
@@ -23,56 +22,41 @@
         ipa-server-install --unattended
         --realm {{ ipa_realm }}
         --domain {{ ipa_domain }}
-        --ds-password {{ vault_idm_admin_password }}
-        --admin-password {{ vault_idm_admin_password }}
+        --ds-password {{ ipa_admin_password }}
+        --admin-password {{ ipa_admin_password }}
         --setup-dns --no-forwarders
       args:
         creates: /etc/ipa/default.conf
 
     - name: Ensure Kerberos credentials for IPA admin
-      shell: echo "{{ vault_idm_admin_password }}" | kinit {{ ipa_admin_user }}@{{ ipa_realm }}
-      register: kinit_output
-      changed_when: false
-      failed_when: kinit_output.rc != 0
+      shell: echo "{{ ipa_admin_password }}" | kinit {{ ipa_admin_user }}@{{ ipa_realm }}
+      environment:
+        KRB5_CONFIG: /etc/krb5.conf
 
-    - name: Create dummy users in IdM
+    - name: Create dummy IdM users
       loop:
-        - { name: "lmorales", first: "Leo", last: "Morales" }
-        - { name: "qscott", first: "Quinn", last: "Scott" }
-        - { name: "adiaz", first: "Andrew", last: "Diaz" }
-        - { name: "nchavez", first: "Nolan", last: "Chavez" }
-        - { name: "gtorres", first: "Gianna", last: "Torres" }
-        - { name: "sjackson", first: "Serenity", last: "Jackson" }
-        - { name: "lreyes", first: "Lucas", last: "Reyes" }
-        - { name: "mlopez", first: "Muhammad", last: "Lopez" }
-      command: >
-        ipa user-add {{ item.name }} \
-        --first {{ item.first }} \
-        --last {{ item.last }} \
-        --homedir /home/{{ item.name }} \
-        --shell /bin/bash
-      ignore_errors: true
+        - { username: "lmorales", first: "Leo", last: "Morales" }
+        - { username: "qscott", first: "Quinn", last: "Scott" }
+        - { username: "adiaz", first: "Andrew", last: "Diaz" }
+        - { username: "nchavez", first: "Nolan", last: "Chavez" }
+        - { username: "gtorres", first: "Gianna", last: "Torres" }
+        - { username: "sjackson", first: "Serenity", last: "Jackson" }
+        - { username: "lreyes", first: "Lucas", last: "Reyes" }
+        - { username: "mlopez", first: "Muhammad", last: "Lopez" }
+      block:
+        - name: Add user
+          command: >
+            ipa user-add {{ item.username }}
+            --first {{ item.first }}
+            --last {{ item.last }}
+            --homedir=/home/{{ item.username }}
+            --shell=/bin/bash
+          args:
+            creates: "/home/{{ item.username }}"
 
-    - name: Set passwords for dummy users
-      shell: echo -e "red22hat\nred22hat" | ipa passwd {{ item }}
-      loop:
-        - lmorales
-        - qscott
-        - adiaz
-        - nchavez
-        - gtorres
-        - sjackson
-        - lreyes
-        - mlopez
+        - name: Set initial password
+          shell: echo -e "red22hat\nred22hat" | ipa passwd {{ item.username }}
 
-    - name: Set password expiration far in future
-      command: ipa user-mod {{ item }} --setattr=krbPasswordExpiration=20301231011529
-      loop:
-        - lmorales
-        - qscott
-        - adiaz
-        - nchavez
-        - gtorres
-        - sjackson
-        - lreyes
-        - mlopez
+        - name: Set password expiration
+          command: ipa user-mod {{ item.username }} --setattr=krbPasswordExpiration=20301231011529
+
