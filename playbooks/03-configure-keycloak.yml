@@ -1,73 +1,33 @@
 ---
-- name: Install and configure Keycloak with automatic realm creation
+- name: Install and configure Keycloak with IdM integration
   hosts: tag_keycloak
   become: true
   vars:
-    keycloak_admin_user: admin
-    keycloak_admin_password: red22hat
     keycloak_realm: "{{ keycloak_realm }}"
     keycloak_base_url: "{{ keycloak_base_url }}"
-    keycloak_conf_path: /etc/keycloak/keycloak.conf
-    keycloak_cli: /opt/keycloak/bin/kcadm.sh
-
+    ipa_domain: "{{ ipa_domain }}"
+    ipa_realm: "{{ ipa_realm }}"
+    ipa_server: "{{ ipa_server }}"
+    ipa_admin_user: "{{ ipa_admin_user }}"
+    ipa_admin_password: "{{ vault_idm_admin_password }}"
   tasks:
-    - name: Enable Keycloak module
-      ansible.builtin.command: dnf module enable -y keycloak:amq-streams
-      changed_when: false
-
-    - name: Install Keycloak
-      ansible.builtin.dnf:
-        name: keycloak
+    - name: Install Keycloak and dependencies
+      package:
+        name:
+          - keycloak
+          - java-17-openjdk
         state: present
 
-    - name: Configure Keycloak
-      ansible.builtin.copy:
-        dest: "{{ keycloak_conf_path }}"
-        content: |
-          hostname=0.0.0.0
-          http-enabled=true
-          http-port=8080
-          https-port=8443
-          hostname-strict=false
-          log-level=INFO
-          admin={{ keycloak_admin_user }}
-          admin-password={{ keycloak_admin_password }}
-        owner: keycloak
-        group: keycloak
-        mode: '0644'
-
-    - name: Start and enable Keycloak
-      ansible.builtin.systemd:
-        daemon_reload: true
+    - name: Ensure Keycloak service is enabled and started
+      service:
         name: keycloak
+        enabled: yes
         state: started
-        enabled: true
 
-    - name: Wait for Keycloak to be reachable
-      ansible.builtin.wait_for:
-        host: "{{ ansible_host }}"
-        port: 8080
-        timeout: 120
-
-    - name: Login to Keycloak admin CLI
-      ansible.builtin.shell: |
-        {{ keycloak_cli }} config credentials \
-          --server {{ keycloak_base_url }}/ \
-          --realm master \
-          --user {{ keycloak_admin_user }} \
-          --password {{ keycloak_admin_password }}
-      args:
-        executable: /bin/bash
-        creates: /root/.keycloak/kcadm.config
-      environment:
-        PATH: "/opt/keycloak/bin:{{ ansible_env.PATH }}"
-
-    - name: Create Keycloak realm if it doesn't exist
-      ansible.builtin.shell: |
-        {{ keycloak_cli }} get realms/{{ keycloak_realm }} || \
-        {{ keycloak_cli }} create realms -s realm={{ keycloak_realm }} -s enabled=true
-      args:
-        executable: /bin/bash
-      environment:
-        PATH: "/opt/keycloak/bin:{{ ansible_env.PATH }}"
-
+    - name: Debug Keycloak variables
+      debug:
+        msg:
+          - "Realm: {{ keycloak_realm }}"
+          - "Base URL: {{ keycloak_base_url }}"
+          - "IPA Domain: {{ ipa_domain }}"
+          - "IPA Server: {{ ipa_server }}"

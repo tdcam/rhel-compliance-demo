@@ -75,7 +75,7 @@ resource "aws_instance" "idm" {
   key_name      = "demo-key"
 
   tags = {
-    Name = "idm"
+    Name = "idm-host"
     Role = "idm"
   }
 }
@@ -88,7 +88,7 @@ resource "aws_instance" "keycloak" {
   key_name      = "demo-key"
 
   tags = {
-    Name = "keycloak"
+    Name = "keycloak-host"
     Role = "keycloak"
   }
 }

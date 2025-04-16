@@ -1,22 +1,17 @@
-# IdM Configuration
 ipa_domain: sandbox1108.opentlc.com
 ipa_realm: SANDBOX1108.OPENTLC.COM
-# ipa_server: "{{ hostvars[groups['tag_idm'][0]].ansible_host | default(hostvars[groups['tag_idm'][0]].public_ip_address) }}"
+ipa_server: "{{ hostvars[groups['tag_idm'][0]].ansible_host | default(hostvars[groups['tag_idm'][0]].public_ip_address) }}"
 ipa_admin_user: admin
 vault_idm_admin_password: red22hat
 
-# AWS Settings
 aws_region: us-east-2
-
-stig_ami_id: ami-0dee8d0e6a88728d8         # STIG-hardened image
-standard_ami_id: ami-0672bca11b972c7d0     # Standard RHEL image
+stig_ami_id: ami-0dee8d0e6a88728d8
+standard_ami_id: ami-0672bca11b972c7d0
 instance_type: t3.medium
 instance_count: 2
 
-# Keycloak Configuration
 keycloak_realm: CORP-REALM
 keycloak_base_url: "http://{{ hostvars[groups['tag_keycloak'][0]].ansible_host | default(hostvars[groups['tag_keycloak'][0]].public_ip_address) }}:8080"
 
-# OpenSCAP
 openscap_report_dir: /tmp/openscap-reports
 
