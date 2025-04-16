@@ -1,16 +1,13 @@
 ---
-- name: Enroll STIG RHEL clients into IdM
-  hosts: stig_0,stig_1
+- name: Enroll STIG-hardened RHEL clients into IdM
+  hosts: tag_stig-0,tag_stig-1
   become: true
-  gather_facts: false
-
   vars:
     ipa_domain: "{{ ipa_domain }}"
     ipa_realm: "{{ ipa_realm }}"
     ipa_server: "{{ ipa_server }}"
     ipa_admin_user: "{{ ipa_admin_user }}"
     ipa_admin_password: "{{ vault_idm_admin_password }}"
-
   roles:
     - redhat.rhel_system_roles.ipaclient
 
