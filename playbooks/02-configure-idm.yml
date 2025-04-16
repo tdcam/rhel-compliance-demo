@@ -2,16 +2,23 @@
 - name: Configure IdM server and populate dummy users
   hosts: all
   become: true
+
   vars:
     ipa_domain: sandbox1108.opentlc.com
     ipa_realm: SANDBOX1108.OPENTLC.COM
     ipa_admin_user: admin
     ipa_admin_password: red22hat
-  tasks:
-    - name: Wait for SSH to become available
-      wait_for_connection:
-        timeout: 120
+    dummy_users:
+      - { username: lmorales, first: Leo, last: Morales }
+      - { username: qscott, first: Quinn, last: Scott }
+      - { username: adiaz, first: Andrew, last: Diaz }
+      - { username: nchavez, first: Nolan, last: Chavez }
+      - { username: gtorres, first: Gianna, last: Torres }
+      - { username: sjackson, first: Serenity, last: Jackson }
+      - { username: lreyes, first: Lucas, last: Reyes }
+      - { username: mlopez, first: Muhammad, last: Lopez }
 
+  tasks:
     - name: Install IdM server packages
       dnf:
         name: ipa-server
@@ -30,33 +37,23 @@
 
     - name: Ensure Kerberos credentials for IPA admin
       shell: echo "{{ ipa_admin_password }}" | kinit {{ ipa_admin_user }}@{{ ipa_realm }}
-      environment:
-        KRB5_CONFIG: /etc/krb5.conf
+      register: kinit_result
+      changed_when: false
+      failed_when: kinit_result.rc != 0
 
     - name: Create dummy IdM users
-      loop:
-        - { username: "lmorales", first: "Leo", last: "Morales" }
-        - { username: "qscott", first: "Quinn", last: "Scott" }
-        - { username: "adiaz", first: "Andrew", last: "Diaz" }
-        - { username: "nchavez", first: "Nolan", last: "Chavez" }
-        - { username: "gtorres", first: "Gianna", last: "Torres" }
-        - { username: "sjackson", first: "Serenity", last: "Jackson" }
-        - { username: "lreyes", first: "Lucas", last: "Reyes" }
-        - { username: "mlopez", first: "Muhammad", last: "Lopez" }
-      block:
-        - name: Add user
-          command: >
-            ipa user-add {{ item.username }}
-            --first {{ item.first }}
-            --last {{ item.last }}
-            --homedir=/home/{{ item.username }}
-            --shell=/bin/bash
-          args:
-            creates: "/home/{{ item.username }}"
+      command: >
+        ipa user-add {{ item.username }}
+        --first {{ item.first }}
+        --last {{ item.last }}
+        --homedir /home/{{ item.username }}
+        --shell /bin/bash
+      loop: "{{ dummy_users }}"
 
-        - name: Set initial password
-          shell: echo -e "red22hat\nred22hat" | ipa passwd {{ item.username }}
-
-        - name: Set password expiration
-          command: ipa user-mod {{ item.username }} --setattr=krbPasswordExpiration=20301231011529
+    - name: Set passwords and expiration for dummy users
+      shell: |
+        echo "{{ ipa_admin_password }}" | kinit {{ ipa_admin_user }}@{{ ipa_realm }}
+        echo "{{ ipa_admin_password }}" | ipa passwd {{ item.username }}
+        ipa user-mod {{ item.username }} --setattr=krbPasswordExpiration=20301231011529
+      loop: "{{ dummy_users }}"
 
