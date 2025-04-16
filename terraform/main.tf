@@ -52,8 +52,7 @@ resource "aws_security_group" "ssh" {
 }
 
 # STIG-compliant instances
-resource "aws_instance" "stig" {
-  count         = 2
+resource "aws_instance" "stig_0" {
   ami           = var.stig_ami_id
   instance_type = var.instance_type
   subnet_id     = aws_subnet.public.id
@@ -61,12 +60,25 @@ resource "aws_instance" "stig" {
   key_name      = "demo-key"
 
   tags = {
-    Name = "stig-${count.index}"
+    Name = "stig-0"
     Role = "stig"
   }
 }
 
-# Standard RHEL instances (IdM and Keycloak)
+resource "aws_instance" "stig_1" {
+  ami           = var.stig_ami_id
+  instance_type = var.instance_type
+  subnet_id     = aws_subnet.public.id
+  vpc_security_group_ids = [aws_security_group.ssh.id]
+  key_name      = "demo-key"
+
+  tags = {
+    Name = "stig-1"
+    Role = "stig"
+  }
+}
+
+# Standard RHEL instance for IdM
 resource "aws_instance" "idm" {
   ami           = var.standard_ami_id
   instance_type = var.instance_type
@@ -75,11 +87,12 @@ resource "aws_instance" "idm" {
   key_name      = "demo-key"
 
   tags = {
-    Name = "idm-host"
+    Name = "idm"
     Role = "idm"
   }
 }
 
+# Standard RHEL instance for Keycloak
 resource "aws_instance" "keycloak" {
   ami           = var.standard_ami_id
   instance_type = var.instance_type
@@ -88,7 +101,7 @@ resource "aws_instance" "keycloak" {
   key_name      = "demo-key"
 
   tags = {
-    Name = "keycloak-host"
+    Name = "keycloak"
     Role = "keycloak"
   }
 }
