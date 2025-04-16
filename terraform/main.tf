@@ -7,8 +7,8 @@ resource "aws_internet_gateway" "igw" {
 }
 
 resource "aws_subnet" "public" {
-  vpc_id            = aws_vpc.main.id
-  cidr_block        = var.public_subnet_cidr
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = var.public_subnet_cidr
   map_public_ip_on_launch = true
 }
 
@@ -51,16 +51,45 @@ resource "aws_security_group" "ssh" {
   }
 }
 
-resource "aws_instance" "rhel" {
-  count         = var.instance_count
-  ami           = var.ami_id
+# STIG-compliant instances
+resource "aws_instance" "stig" {
+  count         = 2
+  ami           = var.stig_ami_id
   instance_type = var.instance_type
   subnet_id     = aws_subnet.public.id
   vpc_security_group_ids = [aws_security_group.ssh.id]
-  key_name      = "demo-key" # replace with actual EC2 keypair
+  key_name      = "demo-key"
 
   tags = {
-    Name = "rhel-demo-${count.index}"
+    Name = "stig-${count.index}"
+    Role = "stig"
+  }
+}
+
+# Standard RHEL instances (IdM and Keycloak)
+resource "aws_instance" "idm" {
+  ami           = var.standard_ami_id
+  instance_type = var.instance_type
+  subnet_id     = aws_subnet.public.id
+  vpc_security_group_ids = [aws_security_group.ssh.id]
+  key_name      = "demo-key"
+
+  tags = {
+    Name = "idm"
+    Role = "idm"
+  }
+}
+
+resource "aws_instance" "keycloak" {
+  ami           = var.standard_ami_id
+  instance_type = var.instance_type
+  subnet_id     = aws_subnet.public.id
+  vpc_security_group_ids = [aws_security_group.ssh.id]
+  key_name      = "demo-key"
+
+  tags = {
+    Name = "keycloak"
+    Role = "keycloak"
   }
 }
 
