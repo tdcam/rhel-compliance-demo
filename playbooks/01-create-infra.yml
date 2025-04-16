@@ -15,10 +15,12 @@
       community.general.terraform:
         project_path: "{{ tf_dir }}"
         state: present
+        variables:
+          stig_ami_id: "{{ stig_ami_id }}"
+          standard_ami_id: "{{ standard_ami_id }}"
         variables_file: "{{ tf_dir }}/terraform.tfvars"
       register: terraform_output
 
     - name: Display Terraform outputs
       debug:
         var: terraform_output.outputs
-
