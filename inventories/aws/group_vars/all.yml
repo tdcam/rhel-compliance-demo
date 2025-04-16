@@ -1,7 +1,7 @@
 # IdM Configuration
 ipa_domain: sandbox1108.opentlc.com
 ipa_realm: SANDBOX1108.OPENTLC.COM
-ipa_server: "{{ hostvars[groups['tag_idm'][0]].ansible_host | default(hostvars[groups['tag_idm'][0]].public_ip_address) }}"
+# ipa_server: "{{ hostvars[groups['tag_idm'][0]].ansible_host | default(hostvars[groups['tag_idm'][0]].public_ip_address) }}"
 ipa_admin_user: admin
 vault_idm_admin_password: red22hat
 

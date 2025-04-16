@@ -3,54 +3,40 @@
   hosts: tag_idm
   become: true
   vars:
-    ipa_domain: "{{ ipa_domain }}"
-    ipa_realm: "{{ ipa_realm }}"
-    ipa_server: "{{ ipa_server }}"
-    ipa_admin_user: "{{ ipa_admin_user }}"
-    ipa_admin_password: "{{ vault_idm_admin_password }}"
-    idm_users:
-      - { name: "lmorales", first: "Leo", last: "Morales" }
-      - { name: "qscott", first: "Quinn", last: "Scott" }
-      - { name: "adiaz", first: "Andrew", last: "Diaz" }
-      - { name: "nchavez", first: "Nolan", last: "Chavez" }
-      - { name: "gtorres", first: "Gianna", last: "Torres" }
-      - { name: "sjackson", first: "Serenity", last: "Jackson" }
-      - { name: "lreyes", first: "Lucas", last: "Reyes" }
-      - { name: "mlopez", first: "Muhammad", last: "Lopez" }
-
+    ipa_domain: sandbox1108.opentlc.com
+    ipa_realm: SANDBOX1108.OPENTLC.COM
+    ipa_admin_user: admin
+    vault_idm_admin_password: red22hat
   tasks:
+    - name: Set ipa_server fact
+      set_fact:
+        ipa_server: "{{ ansible_host | default(public_ip_address) }}"
+
     - name: Install IdM server with integrated DNS
       command: >
         ipa-server-install --unattended
         --realm {{ ipa_realm }}
         --domain {{ ipa_domain }}
-        --ds-password {{ ipa_admin_password }}
-        --admin-password {{ ipa_admin_password }}
+        --ds-password {{ vault_idm_admin_password }}
+        --admin-password {{ vault_idm_admin_password }}
         --setup-dns --no-forwarders
       args:
         creates: /etc/ipa/default.conf
 
-    - name: Wait for IPA API to come online
-      ansible.builtin.uri:
-        url: "https://{{ ipa_server }}/ipa/session/login_kerberos"
-        method: GET
-        validate_certs: false
-        status_code: 401
-      register: result
-      retries: 10
-      delay: 10
-      until: result.status == 401
-
-    - name: Create dummy users in IdM
+    - name: Create dummy users
+      loop:
+        - { name: 'lmorales', first: 'Leo',      last: 'Morales'  }
+        - { name: 'qscott',   first: 'Quinn',    last: 'Scott'    }
+        - { name: 'adiaz',    first: 'Andrew',   last: 'Diaz'     }
+        - { name: 'nchavez',  first: 'Nolan',    last: 'Chavez'   }
+        - { name: 'gtorres',  first: 'Gianna',   last: 'Torres'   }
+        - { name: 'sjackson', first: 'Serenity', last: 'Jackson'  }
+        - { name: 'lreyes',   first: 'Lucas',    last: 'Reyes'    }
+        - { name: 'mlopez',   first: 'Muhammad', last: 'Lopez'    }
       command: >
         ipa user-add {{ item.name }}
         --first {{ item.first }}
         --last {{ item.last }}
-        --homedir=/home/{{ item.name }}
-        --shell=/bin/bash
-      loop: "{{ idm_users }}"
-      environment:
-        KRB5CCNAME: /tmp/krb5cc_{{ ansible_user_id }}
-      register: user_add_result
-      ignore_errors: true  # Users might already exist during retries
+        --homedir /home/{{ item.name }}
+        --shell /bin/bash
 
