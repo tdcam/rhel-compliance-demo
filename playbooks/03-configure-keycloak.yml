@@ -1,33 +1,33 @@
 ---
-- name: Install and configure Keycloak with IdM integration
+- name: Install and configure Keycloak
   hosts: tag_keycloak
   become: true
   vars:
     keycloak_realm: "{{ keycloak_realm }}"
-    keycloak_base_url: "{{ keycloak_base_url }}"
-    ipa_domain: "{{ ipa_domain }}"
-    ipa_realm: "{{ ipa_realm }}"
     ipa_server: "{{ ipa_server }}"
+    ipa_realm: "{{ ipa_realm }}"
     ipa_admin_user: "{{ ipa_admin_user }}"
-    ipa_admin_password: "{{ vault_idm_admin_password }}"
+    vault_idm_admin_password: "{{ vault_idm_admin_password }}"
   tasks:
-    - name: Install Keycloak and dependencies
-      package:
-        name:
-          - keycloak
-          - java-17-openjdk
+    - name: Install Keycloak from RPM
+      dnf:
+        name: keycloak
         state: present
 
-    - name: Ensure Keycloak service is enabled and started
-      service:
+    - name: Enable and start Keycloak service
+      systemd:
         name: keycloak
-        enabled: yes
+        enabled: true
         state: started
 
-    - name: Debug Keycloak variables
-      debug:
-        msg:
-          - "Realm: {{ keycloak_realm }}"
-          - "Base URL: {{ keycloak_base_url }}"
-          - "IPA Domain: {{ ipa_domain }}"
-          - "IPA Server: {{ ipa_server }}"
+    - name: Wait for Keycloak to be available
+      uri:
+        url: "{{ keycloak_base_url }}/realms/master/.well-known/openid-configuration"
+        method: GET
+        return_content: yes
+        status_code: 200
+      register: keycloak_status
+      retries: 20
+      delay: 10
+      until: keycloak_status.status == 200
+

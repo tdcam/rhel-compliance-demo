@@ -1,5 +1,5 @@
 ---
-- name: Enroll STIG clients into IdM
+- name: Enroll STIG-compliant RHEL clients into IdM
   hosts: tag_stig
   become: true
   vars:

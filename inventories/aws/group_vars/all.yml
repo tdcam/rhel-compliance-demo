@@ -1,6 +1,6 @@
 ipa_domain: sandbox1108.opentlc.com
 ipa_realm: SANDBOX1108.OPENTLC.COM
-ipa_server: "{{ hostvars[groups['tag_idm'][0]].ansible_host | default(hostvars[groups['tag_idm'][0]].public_ip_address) }}"
+ipa_server: "{{ hostvars[groups['tag_idm'][0]].ansible_host }}"
 ipa_admin_user: admin
 vault_idm_admin_password: red22hat
 
@@ -11,7 +11,7 @@ instance_type: t3.medium
 instance_count: 2
 
 keycloak_realm: CORP-REALM
-keycloak_base_url: "http://{{ hostvars[groups['tag_keycloak'][0]].ansible_host | default(hostvars[groups['tag_keycloak'][0]].public_ip_address) }}:8080"
+keycloak_base_url: "http://{{ hostvars[groups['tag_keycloak'][0]].ansible_host }}:8080"
 
 openscap_report_dir: /tmp/openscap-reports
 
