@@ -1,6 +1,6 @@
 ---
 - name: Configure IdM server and populate dummy users
-  hosts: idm
+  hosts: tag_idm
   become: true
   vars:
     ipa_domain: sandbox1108.opentlc.com
@@ -19,7 +19,9 @@
 
   tasks:
     - name: Wait for SSH to become available
-      wait_for_connection:
+      wait_for:
+        port: 22
+        delay: 5
         timeout: 300
 
     - name: Set ipa_server fact dynamically
@@ -27,9 +29,10 @@
         ipa_server: "{{ ansible_host }}"
 
     - name: Install IdM server packages
-      package:
+      dnf:
         name: ipa-server
         state: present
+        update_cache: true
 
     - name: Install IdM server with integrated DNS
       command: >
@@ -39,13 +42,23 @@
         --ds-password {{ ipa_admin_password }}
         --admin-password {{ ipa_admin_password }}
         --setup-dns --no-forwarders
-        --no-host-dns
-        --hostname {{ ansible_host }}
       args:
         creates: /etc/ipa/default.conf
 
+    - name: Wait for IdM API to become available
+      uri:
+        url: "https://{{ ipa_server }}/ipa/session/login_password"
+        method: POST
+        status_code: 200
+        validate_certs: no
+      register: result
+      until: result.status == 200
+      retries: 15
+      delay: 10
+
     - name: Ensure Kerberos credentials for IPA admin
-      command: "echo '{{ ipa_admin_password }}' | kinit {{ ipa_admin_user }}@{{ ipa_realm }}"
+      shell: |
+        echo '{{ ipa_admin_password }}' | kinit {{ ipa_admin_user }}@{{ ipa_realm }}
       environment:
         KRB5_CONFIG: /etc/krb5.conf
 
@@ -66,8 +79,8 @@
       loop: "{{ dummy_users }}"
       loop_control:
         label: "{{ item.username }}"
-      command: >
-        bash -c "echo 'red22hat' | ipa passwd {{ item.username }}"
+      shell: |
+        echo 'red22hat' | ipa passwd {{ item.username }}
       register: ipa_passwd
       failed_when: ipa_passwd.rc != 0 and 'Password change failed' in ipa_passwd.stderr
 
